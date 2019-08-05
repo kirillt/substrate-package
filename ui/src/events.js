@@ -18,35 +18,37 @@ async function main () {
             if (event.section === 'poker') {
                 if (event.method === "Announcement") {
                     let message = decoder.decode(event.data[0]);
-                    NotificationManager.warning(message);
+                    NotificationManager.warning(message, "", 3000);
                 } else if (event.method === "ErrorMessage") {
                     performIfAddressedForUs(event, data => {
                         let message = decoder.decode(data[1]);
-                        NotificationManager.error(message);
+                        NotificationManager.error(message, "", 3000);
                     });
                 } else if (event.method === "InfoMessage") {
                     performIfAddressedForUs(event, data => {
                         let message = decoder.decode(data[1]);
-                        NotificationManager.info(message);
+                        NotificationManager.info(message, "", 1000);
                     });
                 } else if (event.method === "NewParticipant") {
                     let buyIn = event.data[1];
-                    NotificationManager.success(`${name(event)} took a seat with ${buyIn} chips`);
+                    NotificationManager.success(`${name(event)} took a seat with ${buyIn} chips`, "", 2000);
                 } else if (event.method === "NewDealer") {
-                    NotificationManager.info(`${name(event)} becomes new dealer`);
+                    NotificationManager.info(`${name(event)} becomes new dealer`, "", 2000);
                 } else if (event.method === "ParticipantLeft") {
-                    NotificationManager.warning(`${name(event)} left the game`);
+                    NotificationManager.warning(`${name(event)} left the game`, "", 3000);
                 } else if (event.method === "AllIn") {
-                    NotificationManager.warning(`${name(event)} goes all-in!`);
+                    NotificationManager.warning(`${name(event)} goes all-in!`, "", 3000);
                 } else if (event.method === "Raise") {
                     let diff = event.data[1];
-                    NotificationManager.warning(`${name(event)} bets ${diff} more`);
+                    NotificationManager.warning(`${name(event)} bets ${diff} more`, "", 2000);
                 } else if (event.method === "Call") {
-                    NotificationManager.info(`${name(event)} calls the bet`);
+                    NotificationManager.info(`${name(event)} calls the bet`, "", 1000);
                 } else if (event.method === "Check") {
-                    NotificationManager.info(`${name(event)} checks`);
+                    NotificationManager.info(`${name(event)} checks`, "", 1000);
                 } else if (event.method === "Fold") {
-                    NotificationManager.warning(`${name(event)} folds`);
+                    NotificationManager.warning(`${name(event)} folds`, "", 2000);
+                } else if (event.method === "BetsAreMade") {
+                    NotificationManager.info("proceeding to the next stage", "Bets are made", 3000);
                 } else {
                     NotificationManager.info(`${event.method}: ${event.data}`);
                 }

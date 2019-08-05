@@ -1,13 +1,18 @@
 use crate::stage::*;
 
 use parity_codec::{Encode, Decode};
+use core::result;
 use rstd::prelude::*;
+
+type ResultBytes = result::Result<Vec<u8>, &'static str>;
+type ResultOptionBytes = result::Result<Option<Vec<u8>>, &'static str>;
+type ResultUnit = result::Result<(), &'static str>;
 
 pub const KEY_SIZE: usize = 32;
 
 #[derive(Encode, Decode, Default, Clone)]
 pub struct PublicStorage {
-    pub hand:  Vec<u8>,
+    pub pocket:  Vec<u8>,
     pub flop:  Vec<u8>,
     pub turn:  Vec<u8>,
     pub river: Vec<u8>
@@ -16,24 +21,24 @@ pub struct PublicStorage {
 impl PublicStorage {
 
     pub fn is_initialized(&self) -> bool {
-        !self.hand.is_empty() ||
+        !self.pocket.is_empty() ||
         !self.flop.is_empty() ||
         !self.turn.is_empty() ||
         !self.river.is_empty()
     }
 
-    pub fn retrieve(self, stage: StageId) -> Vec<u8> {
+    pub fn retrieve(self, stage: StageId) -> ResultBytes {
         match stage {
-            FLOP => self.flop,
-            TURN => self.turn,
-            RIVER => self.river,
+            FLOP => Ok(self.flop),
+            TURN => Ok(self.turn),
+            RIVER => Ok(self.river),
 
-            _ => panic!("Illegal argument")
+            _ => Err("Illegal argument")
         }
     }
 
     pub fn is_valid(&self) -> bool {
-        self.hand.len()  == KEY_SIZE &&
+        self.pocket.len()  == KEY_SIZE &&
         self.flop.len()  == KEY_SIZE &&
         self.turn.len()  == KEY_SIZE &&
         self.river.len() == KEY_SIZE
@@ -43,7 +48,7 @@ impl PublicStorage {
 
 #[derive(Encode, Decode, Default, Clone)]
 pub struct RevealedSecrets {
-    pub hand:  Option<Vec<u8>>,
+    pub pocket:  Option<Vec<u8>>,
     pub flop:  Option<Vec<u8>>,
     pub turn:  Option<Vec<u8>>,
     pub river: Option<Vec<u8>>
@@ -51,30 +56,30 @@ pub struct RevealedSecrets {
 
 impl RevealedSecrets {
 
-    pub fn retrieve(self, stage: StageId) -> Option<Vec<u8>> {
+    pub fn retrieve(self, stage: StageId) -> ResultOptionBytes {
         match stage {
-            FLOP  => self.flop,
-            TURN  => self.turn,
-            RIVER => self.river,
-            SHOWDOWN => self.hand,
+            FLOP  => Ok(self.flop),
+            TURN  => Ok(self.turn),
+            RIVER => Ok(self.river),
+            SHOWDOWN => Ok(self.pocket),
 
-            _ => panic!("Illegal argument")
+            _ => Err("Illegal argument")
         }
     }
 
-    pub fn submit(&mut self, stage: StageId, secret: Vec<u8>) {
+    pub fn submit(&mut self, stage: StageId, secret: Vec<u8>) -> ResultUnit {
         match stage {
-            FLOP  => self.flop  = Some(secret),
-            TURN  => self.turn  = Some(secret),
-            RIVER => self.river = Some(secret),
-            SHOWDOWN => self.hand = Some(secret),
+            FLOP  => Ok(self.flop  = Some(secret)),
+            TURN  => Ok(self.turn  = Some(secret)),
+            RIVER => Ok(self.river = Some(secret)),
+            SHOWDOWN => Ok(self.pocket = Some(secret)),
 
-            _ => panic!("Illegal argument")
+            _ => Err("Illegal argument")
         }
     }
 
     pub fn is_valid(&self) -> bool {
-        vec![&self.hand, &self.flop, &self.turn, &self.river].iter()
+        vec![&self.pocket, &self.flop, &self.turn, &self.river].iter()
             .all(|secret| {
                 secret.as_ref()
                     .map(|s| s.len() == KEY_SIZE)

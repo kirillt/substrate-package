@@ -20,7 +20,6 @@ const bufEq = require('arraybuffer-equal');
 
 import { decode, image, hidden } from './cards.js';
 import { decrypt } from './naive_rsa.js';
-import { BONDS } from './keys.js';
 import {BalanceBond} from "./BalanceBond";
 const keys = require('./keys.js');
 const stages = require('./stages.js');
@@ -65,16 +64,12 @@ export class GameSegment extends React.Component {
             this.isPlayer.map(p =>
                 d || p));
 
-        this.handKey = new Bond();
-        this.flopKey = new Bond();
-        this.turnKey = new Bond();
-        this.riverKey = new Bond();
-
         this.pocketCards = runtime.poker.pocketCards(game.user);
         this.opponentCards = this.opponent.map(runtime.poker.openCards);
 
         this.sharedCards = runtime.poker.sharedCards;
         this.stage = runtime.poker.stage;
+        this.showdown = this.stage.map(stage => stage === stages.Showdown);
 
         this.raise = new Bond();
         this.betsAreMade = runtime.poker.betsNow.map(who => who === null);
@@ -87,7 +82,7 @@ export class GameSegment extends React.Component {
                 if (joined && logged) { //joining a game while being logged in
                     this.pocketCardsAreDealt.then(dealt => {
                         console.log("Joining the game");
-                        keys.generate();
+                        console.assert(!dealt);
                         this.requestPreflop();
                     });
                 }
@@ -102,7 +97,6 @@ export class GameSegment extends React.Component {
                         if (dealt) {
                             keys.load();
                         } else {
-                            keys.generate();
                             this.requestPreflop();
                         }
                     });
@@ -111,7 +105,9 @@ export class GameSegment extends React.Component {
         });
 
         this.betsAreMade.tie(playersAreReady => {
-            this.requestNextStage(playersAreReady)
+            if (playersAreReady) {
+                this.requestNextStage();
+            }
         });
     }
 
@@ -130,16 +126,17 @@ export class GameSegment extends React.Component {
     }
 
     requestPreflop () {
+        keys.generate();
         game.opponent.tie((other, id) => {
             if (other !== null) {
                 console.log("Requesting a new round");
                 let tx = {
                     sender: this.user,
                     call: calls.poker.preflop(
-                        keys.hand.map(key => key.modulus),
-                        keys.flop.map(key => key.modulus),
-                        keys.turn.map(key => key.modulus),
-                        keys.river.map(key => key.modulus))
+                        keys.Pocket.map(key => key.modulus),
+                        keys.Flop.map(key => key.modulus),
+                        keys.Turn.map(key => key.modulus),
+                        keys.River.map(key => key.modulus))
                 };
                 let status = post(tx);
                 status.tie((s,id) => {
@@ -155,23 +152,24 @@ export class GameSegment extends React.Component {
         });
     }
 
-    requestNextStage (playersAreReady) {
-        if (playersAreReady) {
-            let tx = {
-                sender: this.user,
-                call: calls.poker.nextStage(this.stage.map(stage => {
-                    return stages.secretFromStage(stage);
-                }))
-            };
-            let status = post(tx);
-            game.nextStageRequested = true;
-            status.tie((s,id) => {
-                if (s.confirmed || s.scheduled) {
-                    console.log("Request for a new stage registered");
-                }
-                game.nextStageRequested = false;
-            });
-        }
+    requestNextStage () {
+        let requested = this.stage.map(s => s + 1);
+        let secret = requested.map(s => stages.secretFromStage(s));
+        this.stage.then(current => {
+            if (current >= stages.Preflop && current <= stages.River) {
+                console.log("Requesting next stage, current: ", current);
+                let tx = {
+                    sender: this.user,
+                    call: calls.poker.nextStage(requested, secret)
+                };
+                let status = post(tx);
+                status.tie((s,id) => {
+                    if (s.confirmed || s.scheduled) {
+                        console.log("Request for a new stage registered");
+                    }
+                });
+            }
+        });
     }
 
     render () {
@@ -216,8 +214,8 @@ export class GameSegment extends React.Component {
                         <table><tbody><tr>
                             <td>Blinds are </td>
                             <td><Label color="violet" size="large">
-                                <Pretty value={runtime.poker.blinds
-                                    .map(blinds => `${blinds[0][0]}/${blinds[0][1]}`)
+                                <Pretty value={runtime.poker.blinds.map(blinds =>
+                                    `${blinds[0][0]}/${blinds[0][1]}`)
                                 }/>
                             </Label></td>
                             <td> in this game</td>
@@ -325,7 +323,7 @@ export class GameSegment extends React.Component {
             'paddingBottom': '20px',
         }}>
             <If condition={this.pocketCardsAreDealt} then={<span>
-                {/*Players have received cards on their hands*/}
+                {/*Players have received their pocket cards*/}
                 <table><tbody><tr>
                         <td>
                             <table><tbody><tr><td>
@@ -341,7 +339,10 @@ export class GameSegment extends React.Component {
                             </td></tr></tbody></table>
                         </td>
                         <td>
-                            <table><tbody><tr height="230"><td>
+                            <table><tbody><tr height="320"><td>
+                                <div align="center">
+                                    { this.displayPot() }
+                                </div>
                                 <div style={{
                                     'paddingLeft': '24px'}}>
                                     <div style={{
@@ -360,19 +361,19 @@ export class GameSegment extends React.Component {
                                 </div>
                             </td></tr><tr><td>
                                 <div align="center">
-                                    <If condition={bondsAccountsAreEqualAndNotNull(runtime.poker.betsNow, game.user)}
-                                        then={this.displayActions()}
-                                        else={<Label color="blue">
-                                            Waiting for opponent's decision
-                                        </Label>}/>
+                                    <If condition={game.showdown}
+                                        then={this.displayEndActions()}
+                                        else={this.displayBetActionsWhenReady()}/>
                                 </div>
                             </td></tr></tbody></table>
                         </td>
                 </tr></tbody></table>
             </span>} else={<span>
                 {/*Players haven't received cards yet*/}
+                <div style={{ paddingBottom: '2em' }}>
+                    {this.displayMessage("Good luck and have fun.")}
+                </div>
                 {this.displayStatus("Providing round keys and waiting for cards...")}
-                {this.displayMessage("Good luck and have fun.")}
             </span>}/>
         </div>;
     }
@@ -430,25 +431,67 @@ export class GameSegment extends React.Component {
     }
 
     displayPocketCards () {
-        return SvgRow("hand",
-            this.pocketCards.map(encrypted =>
-                keys.hand.map(key => {
-                    let decrypted = decrypt(encrypted, key.modulus, key.exponent);
-                    let cards = decode(decrypted);
-                    return cards.map(image);
-                }))
-        );
+        //we change the source to open cards because after showdown it makes problems
+        //when we are re-generating keys (at this moment cards are still encrypted with old key)
+        return <If condition={this.showdown}
+           then={SvgRow("pocket",
+               runtime.poker.openCards(game.user).map(encoded => {
+                   let cards = decode(encoded);
+                   return cards.map(image)
+               }))}
+           else={SvgRow("pocket",
+               this.pocketCards.map(encrypted =>
+                   keys.Pocket.map(key => {
+                       let decrypted = decrypt(encrypted, key.modulus, key.exponent);
+                       let cards = decode(decrypted);
+                       return cards.map(image);
+                   })))}/>;
     }
 
     displayBet (participant) {
         let bet = runtime.poker.bets(participant);
         return <div align="center" style={{'height': '30px'}}>
-            <If condition={bet.map(v => v !== 0)}
+            <If condition={bet.map(n => n.valueOf() !== 0)}
                 then={<Label color="olive">Bet: <Pretty value={bet}/></Label>}/>
         </div>;
     }
 
-    displayActions () {
+    displayPot () {
+        let pot = runtime.poker.pot;
+        return <div style={{ paddingTop: '1em', paddingBottom: '1em' }}>
+            <If condition={pot.map(n => n.valueOf() !== 0)}
+                then={<Label size="huge" color="purple">Pot: <Pretty value={pot}/></Label>}/>
+        </div>;
+    }
+
+    displayBetActionsWhenReady () {
+        return <If condition={bondsAccountsAreEqualAndNotNull(runtime.poker.betsNow, game.user)}
+            then={this.displayBetActions()}
+            else={<Label color="blue" size="large">
+                Waiting for your turn
+            </Label>}/>;
+    }
+
+    displayBetActions () {
+        //not only fun, but also notifies when the only option to raise is all-in
+        let raiseLabel = game.raise.defaultTo(0).map(bet =>
+            runtime.poker.stacks(game.user).map(stack => {
+                if (stack.valueOf() === bet) {
+                    return "All-in!";
+                } else {
+                    return "Raise";
+                }
+            }));
+
+        let callLabel = runtime.poker.betLevel.defaultTo(0).map(level =>
+            runtime.poker.stacks(game.user).map(stack => {
+                if (stack.valueOf() <= level) {
+                    return "All-in!";
+                } else {
+                    return "Call";
+                }
+            }));
+
         return <table><tbody>
             <tr><td>
                 <TransactButton color="red" content="Leave" tx={{
@@ -459,11 +502,11 @@ export class GameSegment extends React.Component {
                     sender: this.user,
                     call: calls.poker.fold()
                 }} size="massive"/>
-                <TransactButton color="yellow" content="Raise" tx={{
+                <TransactButton color="yellow" content={raiseLabel} tx={{
                     sender: this.user,
                     call: calls.poker.raise(game.raise)
                 }} size="massive"/>
-                <TransactButton color="green" content="Call" tx={{
+                <TransactButton color="green" content={callLabel} tx={{
                     sender: this.user,
                     call: calls.poker.call()
                 }} size="massive"/>
@@ -493,6 +536,17 @@ export class GameSegment extends React.Component {
                 }</Rspan>
             </td></tr>
         </tbody></table>;
+    }
+
+    displayEndActions () {
+        return <div>
+            <TransactButton content="Quit" color="red" tx={{
+                sender: this.user,
+                call: calls.poker.leaveGame()
+            }}/>
+            <Button content="One more!" icon="123" color="blue"
+                    onClick={this.requestPreflop} />
+        </div>
     }
 
     displayOpponentCards () {

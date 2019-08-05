@@ -5,6 +5,4 @@ pub const PREFLOP:  StageId = 1;
 pub const FLOP:     StageId = 2;
 pub const TURN:     StageId = 3;
 pub const RIVER:    StageId = 4;
-
-///This stage is a fake one, it doesn't go to UI
 pub const SHOWDOWN: StageId = 5;

@@ -1,35 +1,41 @@
 import {pretty} from "oo7-substrate";
 import { Bond } from 'oo7';
 
-import {STAGES, NAMES} from './stages.js';
+const stages = require('./stages.js');
 
 const NodeRSA = require('node-rsa');
 
-export const hand = new Bond();
-export const flop = new Bond();
-export const turn = new Bond();
-export const river = new Bond();
+export const Pocket = new Bond();
+export const Flop = new Bond();
+export const Turn = new Bond();
+export const River = new Bond();
+export const Showdown = Pocket;
 
-export let BONDS = [hand, flop, turn, river];
+export let StageToKeyBond = new Map([
+    [stages.Flop, Flop],
+    [stages.Turn, Turn],
+    [stages.River, River],
+    [stages.Showdown, Showdown],
+]);
 
 export function generate () {
-    for (let stage of STAGES) {
-        generateKeyPair(NAMES[stage], BONDS[stage]);
+    for (let [stage, name] of stages.StageToName) {
+        generateKeyPair(name, StageToKeyBond.get(stage));
     }
 }
 
 export function load () {
-    for (let stage of STAGES) {
-        loadKeyIntoBond(NAMES[stage], BONDS[stage]);
+    for (let [stage, name] of stages.StageToName) {
+        loadKeyIntoBond(name, StageToKeyBond.get(stage));
     }
 }
 
 export function clear () {
     console.assert(game.user.isReady());
-    STAGES.forEach(stage => {
-        clearStorage(NAMES[stage]);
-        BONDS[stage].reset();
-    });
+    for (let [stage, name] of stages.StageToName) {
+        StageToKeyBond.get(stage).reset();
+        clearStorage(name);
+    }
 }
 
 function clearStorage (field) {
@@ -40,11 +46,12 @@ function clearStorage (field) {
 
 function loadKeyIntoBond (field, bond) {
     console.log(`Loading '${field}' key`);
-
     let modulus = localStorage.getItem(modulusField(field));
     let exponent = localStorage.getItem(exponentField(field));
 
     if (modulus !== "" && exponent !== "") {
+        console.assert(modulus);
+        console.assert(exponent);
         modulus = Buffer.from(modulus, 'hex');
         exponent = Buffer.from(exponent, 'hex');
         console.assert(modulus.length === 32, "public key must consist of 32 bytes");
@@ -79,9 +86,11 @@ const MODULUS_SUFFIX = 'key_modulus';
 const EXPONENT_SUFFIX = 'key_exponent';
 
 function modulusField (keyName) {
+    console.assert(game.user._value);
     return `${STORAGE_PREFIX}_${pretty(game.user._value)}_${keyName}_${MODULUS_SUFFIX}`;
 }
 
 function exponentField (keyName) {
+    console.assert(game.user._value);
     return `${STORAGE_PREFIX}_${pretty(game.user._value)}_${keyName}_${EXPONENT_SUFFIX}`;
 }
