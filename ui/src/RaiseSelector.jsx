@@ -6,6 +6,11 @@ export class RaiseSelector extends React.Component {
         super(props);
         this.state = { value: props.default };
         game.raise.changed(this.state.value);
+
+        //workaround
+        if (props.minValue > props.maxValue) {
+            props.maxValue = props.minValue;
+        }
     }
 
     setState (state) {

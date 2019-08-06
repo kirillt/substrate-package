@@ -21,14 +21,14 @@ pub const HIGH_CARD:       Rank = 0;
 
 #[derive(Debug)]
 pub struct RankedHand {
-    combination: Combination,
+    pub combination: Combination,
     cards: Vec<Card>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Combination {
-    high: Nominal,
-    rank: Rank,
+    pub rank: Rank,
+    pub high: Nominal,
 }
 
 pub fn classify(hand: &[Card]) -> Combination {

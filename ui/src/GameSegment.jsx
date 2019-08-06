@@ -23,6 +23,8 @@ import { decrypt } from './naive_rsa.js';
 import {BalanceBond} from "./BalanceBond";
 const keys = require('./keys.js');
 const stages = require('./stages.js');
+const codec = require('./codec.js');
+const ranking = require('./ranking.js');
 
 function accountsAreEqualAndNotNull(left, right) {
     return left !== null && right !== null
@@ -38,6 +40,8 @@ export class GameSegment extends React.Component {
         super(props);
         window.game = this;
         this.accounts = secretStore();
+
+        codec.addTransforms();
 
         this.user = new Bond;
         this.isLoggedIn = (new Bond).default(false);
@@ -83,7 +87,7 @@ export class GameSegment extends React.Component {
                     this.pocketCardsAreDealt.then(dealt => {
                         console.log("Joining the game");
                         console.assert(!dealt);
-                        this.requestPreflop();
+                        this.initPreflop();
                     });
                 }
             });
@@ -97,7 +101,7 @@ export class GameSegment extends React.Component {
                         if (dealt) {
                             keys.load();
                         } else {
-                            this.requestPreflop();
+                            this.initPreflop();
                         }
                     });
                 }
@@ -125,29 +129,38 @@ export class GameSegment extends React.Component {
         }
     }
 
-    requestPreflop () {
+    initPreflop () {
         keys.generate();
         game.opponent.tie((other, id) => {
             if (other !== null) {
-                console.log("Requesting a new round");
-                let tx = {
-                    sender: this.user,
-                    call: calls.poker.preflop(
-                        keys.Pocket.map(key => key.modulus),
-                        keys.Flop.map(key => key.modulus),
-                        keys.Turn.map(key => key.modulus),
-                        keys.River.map(key => key.modulus))
-                };
-                let status = post(tx);
-                status.tie((s,id) => {
-                    if (s.confirmed || s.scheduled) {
-                        console.log("Request for a new round registered");
-                        status.untie(id);
+                game.stage.then(stage => {
+                    if (stage === stages.Idle) {
+                        console.log("Initializing the game");
+                        this.restartPreflop();
                     }
-                });
-                if (id) {
-                    game.opponent.untie(id);
-                }
+                    if (id) {
+                        game.opponent.untie(id);
+                    }
+                })
+            }
+        });
+    }
+
+    restartPreflop () {
+        console.log("Requesting a new round");
+        let tx = {
+            sender: game.user,
+            call: calls.poker.preflop(
+                keys.Pocket.map(key => key.modulus),
+                keys.Flop.map(key => key.modulus),
+                keys.Turn.map(key => key.modulus),
+                keys.River.map(key => key.modulus))
+        };
+        let status = post(tx);
+        status.tie((s,id) => {
+            if (s.confirmed || s.scheduled) {
+                console.log("Request for a new round registered");
+                status.untie(id);
             }
         });
     }
@@ -159,7 +172,7 @@ export class GameSegment extends React.Component {
             if (current >= stages.Preflop && current <= stages.River) {
                 console.log("Requesting next stage, current: ", current);
                 let tx = {
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.nextStage(requested, secret)
                 };
                 let status = post(tx);
@@ -265,7 +278,7 @@ export class GameSegment extends React.Component {
             </div>
             <div style={{ paddingTop: '1em' }}>
                 <TransactButton tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.createGame(buyIn, blind),
                     compact: false,
                     longevity: true
@@ -280,7 +293,7 @@ export class GameSegment extends React.Component {
             { this.displayMessage("You are waiting at the table...") }
             <div style={{ paddingTop: '1em' }}>
                 <TransactButton tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.leaveGame(),
                     compact: false,
                     longevity: true
@@ -300,7 +313,7 @@ export class GameSegment extends React.Component {
             </div>
             <div style={{ paddingTop: '1em' }}>
                 <TransactButton tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.joinGame(buyIn),
                     compact: false,
                     longevity: true
@@ -322,51 +335,53 @@ export class GameSegment extends React.Component {
             'paddingRight': '20px',
             'paddingBottom': '20px',
         }}>
-            <If condition={this.pocketCardsAreDealt} then={<span>
+        <If condition={this.pocketCardsAreDealt.map(dealt => this.showdown.map(showdown => dealt || showdown))}
+            then={<span>
                 {/*Players have received their pocket cards*/}
                 <table><tbody><tr>
-                        <td>
-                            <table><tbody><tr><td>
-                                { this.displayParticipant(this.opponent, true)}
-                                { this.displayOpponentCards() }
-                                { this.displayBet(this.opponent) }
-                            </td></tr>
-                            <tr height="30"><td></td></tr>
-                            <tr><td>
-                                { this.displayBet(this.user) }
-                                { this.displayPocketCards() }
-                                { this.displayParticipant(this.user, true)}
-                            </td></tr></tbody></table>
-                        </td>
-                        <td>
-                            <table><tbody><tr height="320"><td>
-                                <div align="center">
-                                    { this.displayPot() }
-                                </div>
+                    <td>
+                        <table><tbody><tr><td>
+                            { this.displayParticipant(this.opponent, true)}
+                            { this.displayOpponentCards() }
+                            { this.displayBet(this.opponent) }
+                        </td></tr>
+                        <tr height="30"><td></td></tr>
+                        <tr><td>
+                            { this.displayBet(this.user) }
+                            { this.displayPocketCards() }
+                            { this.displayParticipant(this.user, true)}
+                        </td></tr></tbody></table>
+                    </td>
+                    <td>
+                        <table><tbody><tr height="320"><td>
+                            <div align="center">
+                                { this.displayPot() }
+                                { this.displayRoundResult() }
+                            </div>
+                            <div style={{
+                                'paddingLeft': '24px'}}>
                                 <div style={{
-                                    'paddingLeft': '24px'}}>
-                                    <div style={{
-                                        'height': '265px',
-                                        'width': '838px',
-                                        'backgroundColor': 'forestgreen',
-                                        'border': '6px solid greenyellow',
-                                        'borderRadius': '12px',
-                                        'paddingTop': '12px',
-                                        'paddingLeft': '12px',
-                                        'paddingRight': '12px',
-                                        'paddingBottom': '12px',}}>
-                                        <If condition={this.sharedCards.map(encoded => encoded.length > 0)}
-                                            then={this.displaySharedCards()}/>
-                                    </div>
+                                    'height': '265px',
+                                    'width': '838px',
+                                    'backgroundColor': 'forestgreen',
+                                    'border': '6px solid greenyellow',
+                                    'borderRadius': '12px',
+                                    'paddingTop': '12px',
+                                    'paddingLeft': '12px',
+                                    'paddingRight': '12px',
+                                    'paddingBottom': '12px',}}>
+                                    <If condition={this.sharedCards.map(encoded => encoded.length > 0)}
+                                        then={this.displaySharedCards()}/>
                                 </div>
-                            </td></tr><tr><td>
-                                <div align="center">
-                                    <If condition={game.showdown}
-                                        then={this.displayEndActions()}
-                                        else={this.displayBetActionsWhenReady()}/>
-                                </div>
-                            </td></tr></tbody></table>
-                        </td>
+                            </div>
+                        </td></tr><tr><td>
+                            <div align="center">
+                                <If condition={game.showdown}
+                                    then={this.displayEndActions()}
+                                    else={this.displayBetActionsWhenReady()}/>
+                            </div>
+                        </td></tr></tbody></table>
+                    </td>
                 </tr></tbody></table>
             </span>} else={<span>
                 {/*Players haven't received cards yet*/}
@@ -464,6 +479,32 @@ export class GameSegment extends React.Component {
         </div>;
     }
 
+    displayRoundResult () {
+        let result = runtime.poker.roundResult;
+        return <div style={{ paddingTop: '1em', paddingBottom: '1em' }}>
+            <If condition={result}
+                then={<Rspan className="value">{result.map(result => {
+                    if (result) {
+                        let winner = game.accounts.find(result.winner).name;
+                        let loser = game.accounts.find(result.loser).name;
+                        let winHand = ranking.printCombination(result.win_hand.rank, result.win_hand.high);
+                        let lossHand = ranking.printCombination(result.loss_hand.rank, result.loss_hand.high);
+
+                        return <div>
+                            <Label color="blue" size="big">
+                                <Label color="teal" size="massive"><Pretty value={winner}/></Label>
+                                wins the round with a
+                                <Label color="teal" size="big">{winHand}</Label>
+                            </Label>
+                            <p/>
+                        </div>;
+                    } else {
+                        return <span/>;
+                    }
+                })}</Rspan>}/>
+        </div>;
+    }
+
     displayBetActionsWhenReady () {
         return <If condition={bondsAccountsAreEqualAndNotNull(runtime.poker.betsNow, game.user)}
             then={this.displayBetActions()}
@@ -495,23 +536,23 @@ export class GameSegment extends React.Component {
         return <table><tbody>
             <tr><td>
                 <TransactButton color="red" content="Leave" tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.leaveGameAnyway()
                 }}/>
                 <TransactButton color="red" content="Fold" tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.fold()
                 }} size="massive"/>
                 <TransactButton color="yellow" content={raiseLabel} tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.raise(game.raise)
                 }} size="massive"/>
                 <TransactButton color="green" content={callLabel} tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.call()
                 }} size="massive"/>
                 <TransactButton color="blue" content="Check" tx={{
-                    sender: this.user,
+                    sender: game.user,
                     call: calls.poker.check()
                 }}/>
             </td></tr><tr><td>
@@ -541,11 +582,11 @@ export class GameSegment extends React.Component {
     displayEndActions () {
         return <div>
             <TransactButton content="Quit" color="red" tx={{
-                sender: this.user,
+                sender: game.user,
                 call: calls.poker.leaveGame()
             }}/>
-            <Button content="One more!" icon="123" color="blue"
-                    onClick={this.requestPreflop} />
+            <Button content="One more!" icon="game" color="blue"
+                    onClick={this.restartPreflop} />
         </div>
     }
 
@@ -584,15 +625,12 @@ export class GameSegment extends React.Component {
             </Label>
         </div>;
     }
-
-    displayGameResult () {
-        return <Label>TODO: WINNER</Label>
-    }
 }
 
-//todo: Try to use `bonds.me`, see this doc for details: https://wiki.parity.io/oo7-Parity-Examples
-//todo: Implement codec for some structures. Though they are not actually used, they produce warnings.
+//todo: implement pretty-printers for my bonds
 //todo: Remove direct state mutation and use `setState()`!
+//todo: Try to use `bonds.me`, see this doc for details: https://wiki.parity.io/oo7-Parity-Examples
+//todo: Implement codecs for some structures. Though they are not actually used, they produce warnings.
 //todo: implement `any` combinator for bonds, similar to `all`
 
 // const {} = require('oo7-react');

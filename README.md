@@ -1,11 +1,11 @@
 # Blockchain Poker
 
-__[ WORK IN PROGRESS ]__
+This a proof-of-concept of cryptographically protected Poker game based on Substrate framework.\
+Currently, only 1-on-1 game ("heads up") is implemented and there are still some bugs, mostly at the UI side.
 
 ## Quick start
 
-This a is Poker game based on Substrate framework.\
-Currently, only 1-on-1 games ("heads up") is implemented. To run the game you have to:
+To run the game you have to:
 
 * Go to `node` directory, build the project and run it.
 

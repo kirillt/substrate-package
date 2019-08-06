@@ -1,5 +1,6 @@
 const keys = require('./keys.js');
 
+export const Idle = 0;
 export const Preflop = 1;
 export const Flop = 2;
 export const Turn = 3;
