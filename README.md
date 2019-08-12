@@ -9,7 +9,7 @@ To run the game you have to:
 
 * Go to `node` directory, build the project and run it.
 
-* Then go to `ui` directory and run the UI with `yarn`.\
+* Then go to `ui` directory, install dependencies with `yarn install` and run the UI with `yarn run dev`.\
   Just open `localhost:8000` in browser for every player and log-in with an development account.
 
 Enjoy!
@@ -29,7 +29,7 @@ I use the following scheme for handling private player's cards (a `hand`):
 * In this scenario, revealing of the cards is the same as a submitting your own private key for this round into the blockchain.
 
   If you chose to reveal cards, then your cards combination becomes public and verifiable as long as the blockchain exists.
-  
+
   If you don't want to reveal cards (according to poker rules), then your secret key for this round is erased and nobody will know what cards you had without spending a lot of processing power.
 
 ### Atomic dealing of shared cards
