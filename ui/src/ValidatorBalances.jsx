@@ -1,12 +1,12 @@
 import { ReactiveComponent } from 'oo7-react';
 import { pretty } from 'oo7-substrate';
-import Identicon from 'polkadot-identicon';
+import Identicon from '@polkadot/react-identicon';
 
 export class ValidatorBalances extends ReactiveComponent {
 	constructor () {
 		super(["value", "className"])
 	}
-	
+
 	render() {
 		if (!this.state.value) return (<div/>)
 		return (<div className={this.state.className || 'validator-balances'} name={this.props.name}>

@@ -1,7 +1,7 @@
 const React = require('react');
 const {Bond} = require('oo7');
 const {ReactiveComponent, Rimg} = require('oo7-react');
-const Identicon = require('polkadot-identicon').default;
+const Identicon = require('@polkadot/react-identicon').default;
 const {Label, Input} = require('semantic-ui-react');
 const {InputBond} = require('./InputBond');
 const nacl = require('tweetnacl');
@@ -42,7 +42,7 @@ AccountIdBond.defaultProps = {
 		if (a.match(/^[0-9]+$/)) {
 			return runtime.indices.lookup(+a).map(x => x && { external: x, internal: a, ok: true })
 		}
-		
+
 		return runtime.indices.ss58Decode(a).map(
 			x => x
 				? { external: x, internal: a, ok: true, extra: { knowSecret: !!secretStore().find(a) } }

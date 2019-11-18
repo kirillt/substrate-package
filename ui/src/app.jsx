@@ -7,7 +7,7 @@ import {
 	calls, runtime, chain, system, runtimeUp, ss58Decode, ss58Encode, pretty,
 	addressBook, secretStore, metadata, nodeService, bytesToHex, hexToBytes, AccountId
 } from 'oo7-substrate';
-import Identicon from 'polkadot-identicon';
+import Identicon from '@polkadot/react-identicon';
 import { AccountIdBond, SignerBond } from './AccountIdBond.jsx';
 import { BalanceBond } from './BalanceBond.jsx';
 import { InputBond } from './InputBond.jsx';
