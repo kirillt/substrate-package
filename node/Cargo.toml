@@ -1,15 +1,9 @@
-[profile.release]
-panic = 'unwind'
-
-[build-dependencies]
-vergen = '3'
-
 [package]
-authors = ['Parity Technologies <admin@parity.io>']
+name = 'poker'
+version = '1.1.0'
+authors = ['Kirill Taran <kirill.t256@gmail.com>']
 build = 'build.rs'
 edition = '2018'
-name = 'poker'
-version = '1.0.0'
 
 [[bin]]
 name = 'poker'
@@ -19,69 +13,97 @@ path = 'src/main.rs'
 members = [ "runtime" ]
 
 [dependencies]
-error-chain = '0.12'
-exit-future = '0.1'
-futures = '0.1'
-hex-literal = '0.1'
-log = '0.4'
-parity-codec = '3.2'
-parking_lot = '0.7.1'
-tokio = '0.1'
-trie-root = '0.12.0'
-
-[dependencies.basic-authorship]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-basic-authorship'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.consensus]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-consensus-aura'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.ctrlc]
-features = ['termination']
-version = '3.0'
-
-[dependencies.inherents]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-inherents'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.network]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-network'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
+derive_more = "0.15.0"
+futures = "0.1.29"
+ctrlc = { version = "3.1.3", features = ["termination"] }
+log = "0.4.8"
+tokio = "0.1.22"
+exit-future = "0.1.4"
+parking_lot = "0.9.0"
+codec = { package = "parity-scale-codec", version = "1.0.0" }
+trie-root = "0.15.2"
+sr-io = { git = 'https://github.com/paritytech/substrate.git' }
+substrate-cli = { git = 'https://github.com/paritytech/substrate.git' }
+primitives = { package = "substrate-primitives", git = 'https://github.com/paritytech/substrate.git' }
+substrate-executor = { git = 'https://github.com/paritytech/substrate.git' }
+substrate-service = { git = 'https://github.com/paritytech/substrate.git' }
+inherents = { package = "substrate-inherents", git = 'https://github.com/paritytech/substrate.git' }
+transaction-pool = { package = "substrate-transaction-pool", git = 'https://github.com/paritytech/substrate.git' }
+network = { package = "substrate-network", git = 'https://github.com/paritytech/substrate.git' }
+aura = { package = "substrate-consensus-aura", git = 'https://github.com/paritytech/substrate.git' }
+aura-primitives = { package = "substrate-consensus-aura-primitives", git = 'https://github.com/paritytech/substrate.git' }
+grandpa = { package = "substrate-finality-grandpa", git = 'https://github.com/paritytech/substrate.git' }
+grandpa-primitives = { package = "substrate-finality-grandpa-primitives", git = 'https://github.com/paritytech/substrate.git' }
+substrate-client = { git = 'https://github.com/paritytech/substrate.git' }
+sr-primitives = { git = 'https://github.com/paritytech/substrate.git' }
+basic-authorship = { package = "substrate-basic-authorship", git = 'https://github.com/paritytech/substrate.git' }
 
 [dependencies.poker-runtime]
 path = 'runtime'
 
-[dependencies.primitives]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-primitives'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
+#[profile.release]
+#panic = 'unwind'
 
-[dependencies.sr-io]
-git = 'https://github.com/paritytech/substrate.git'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
+[build-dependencies]
+vergen = "3.0.4"
+build-script-utils = { package = "substrate-build-script-utils", git = 'https://github.com/paritytech/substrate.git' }
 
-[dependencies.substrate-cli]
-git = 'https://github.com/paritytech/substrate.git'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.substrate-client]
-git = 'https://github.com/paritytech/substrate.git'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.substrate-executor]
-git = 'https://github.com/paritytech/substrate.git'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.substrate-service]
-git = 'https://github.com/paritytech/substrate.git'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
-
-[dependencies.transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-transaction-pool'
-rev = 'f2f2994822f4331291597e341798fb6271bb6ef4'
+#[dependencies.sr-io]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "sr-io"
+#
+#[dependencies.substrate-cli]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-cli"
+#
+#[dependencies.primitives]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-primitives"
+#
+#[dependencies.substrate-executor]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-executor"
+#
+#[dependencies.substrate-service]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-service"
+#
+#[dependencies.inherents]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-inherents"
+#
+#[dependencies.transaction-pool]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-transaction-pool"
+#
+#[dependencies.network]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-network"
+#
+#[dependencies.aura]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-consensus-aura"
+#
+#[dependencies.aura-primitives]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-consensus-aura-primitives"
+#
+#[dependencies.grandpa]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-finality-grandpa"
+#
+#[dependencies.grandpa-primitives]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-finality-grandpa-primitives"
+#
+#[dependencies.substrate-client]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-client"
+#
+#[dependencies.basic-authorship]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "substrate-basic-authorship"
+#
+#[dependencies.sr-primitives]
+#git = 'https://github.com/paritytech/substrate.git'
+#package = "sr-primitives"

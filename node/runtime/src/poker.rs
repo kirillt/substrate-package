@@ -8,10 +8,10 @@ use rstd::cmp::Ordering::{
 
 use core::{result, debug_assert};
 
-use parity_codec::{Encode, Decode};
-use runtime_primitives::traits::{As, Hash};
+use codec::{Encode, Decode};
+use sr_primitives::traits::{Hash};
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap};
-use support::traits::{Currency, WithdrawReason, ExistenceRequirement};
+use support::traits::{Randomness, Currency, WithdrawReasons, WithdrawReason, ExistenceRequirement};
 use support::dispatch::Result;
 use system::ensure_signed;
 
@@ -90,7 +90,7 @@ decl_storage! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		fn deposit_event<T>() = default;
+		fn deposit_event() = default;
 
 		fn create_game(origin, buy_in: T::Balance, big_blind: T::Balance) -> Result {
 			let who = ensure_signed(origin)?;
@@ -108,7 +108,7 @@ decl_module! {
 			Self::announce("Dealer joins the game, waiting for a player...");
 			<Dealer<T>>::put(&who);
 
-			let small_blind = big_blind / T::Balance::sa(2);
+			let small_blind = big_blind / 2_u32.into();
 			<Blinds<T>>::put((small_blind, big_blind));
 
 			Self::refill_chips(who, buy_in)
@@ -221,7 +221,7 @@ decl_module! {
 					//This is fake random for my proof-of-concept;
 					//in future, it has to be replaced with off-chain random generation
 					//also it probably can be workarounded with sending a nonce from the player
-					let seed = (<system::Module<T>>::random_seed(), &who, &dealer_keys, &player_keys)
+					let seed = (<randomness_collective_flip::Module<T>>::random_seed(), &who, &dealer_keys, &player_keys)
 						.using_encoded(<T as system::Trait>::Hashing::hash);
 
 					let mut deck = (0..1024)
@@ -250,20 +250,20 @@ decl_module! {
 
 					let flop_cards = naive_rsa::encrypt(&flop_cards[..], &player_keys.flop[..])?;
 					let flop_cards = naive_rsa::encrypt(&flop_cards[..], &dealer_keys.flop[..])?;
-					<FlopCards<T>>::put(flop_cards);
+					<FlopCards>::put(flop_cards);
 
 					let turn_cards = naive_rsa::encrypt(&turn_cards[..], &player_keys.turn[..])?;
 					let turn_cards = naive_rsa::encrypt(&turn_cards[..], &dealer_keys.turn[..])?;
-					<TurnCards<T>>::put(turn_cards);
+					<TurnCards>::put(turn_cards);
 
 					let river_cards = naive_rsa::encrypt(&river_cards[..], &player_keys.river[..])?;
 					let river_cards = naive_rsa::encrypt(&river_cards[..], &dealer_keys.river[..])?;
-					<RiverCards<T>>::put(river_cards);
+					<RiverCards>::put(river_cards);
 
 					Self::init_who_bets(dealer.clone(), &player);
 				}
 
-				<Stage<T>>::put(stage::PREFLOP);
+				<Stage>::put(stage::PREFLOP);
 				<RoundResult<T>>::kill();
 			} else {
 				Self::info(who.clone(), "Waiting for other participants to deal pocket cards");
@@ -353,7 +353,7 @@ decl_module! {
 			if total == stack {
 				Self::deposit_event(RawEvent::AllIn(who.clone()));
 			} else {
-				if total < level * T::Balance::sa(2) {
+				if total < level * 2_u32.into() {
 					return Self::error(who, "Raise must be at least doubling the current bet.");
 				}
 
@@ -402,7 +402,7 @@ decl_module! {
 						Self::reveal_pocket(&dealer, dealer_secret)?;
 						Self::reveal_pocket(&player, player_secret)?;
 						Self::reset_closed_state(&dealer, &player);
-						<Stage<T>>::put(stage);
+						<Stage>::put(stage);
 						return Self::determine_winner(dealer, player);
 					}
 
@@ -422,10 +422,10 @@ decl_module! {
 					let revealed = naive_rsa::decrypt(&hidden, &dealer_key[..], &dealer_secret[..])?;
 					let mut revealed = naive_rsa::decrypt(&revealed, &player_key[..], &player_secret[..])?;
 					Self::validate_revealed_cards(stage, &revealed[..])?;
-					<SharedCards<T>>::mutate(|v| v.append(&mut revealed));
+					<SharedCards>::mutate(|v| v.append(&mut revealed));
 
 					Self::init_who_bets(player, &dealer);
-					<Stage<T>>::put(stage);
+					<Stage>::put(stage);
 					Ok(())
 				},
 				None => {
@@ -475,7 +475,7 @@ impl<T: Trait> Module<T> {
 
 	fn refill_chips(who: T::AccountId, buy_in: T::Balance) -> Result {
 		let _ = <balances::Module<T> as Currency<_>>::withdraw(
-			&who, buy_in, WithdrawReason::Transfer,
+			&who, buy_in, WithdrawReasons::from(WithdrawReason::Transfer),
 			ExistenceRequirement::KeepAlive)?;
 
 		<Stacks<T>>::insert(&who, &buy_in);
@@ -522,7 +522,7 @@ impl<T: Trait> Module<T> {
 		Self::reset_closed_state(&dealer, &player);
 		Self::reset_open_state(&dealer, &player);
 		Self::swap_dealer(dealer, player);
-		<Stage<T>>::kill();
+		<Stage>::kill();
 		Ok(())
 	}
 
@@ -548,7 +548,7 @@ impl<T: Trait> Module<T> {
 			};
 		}
 		<Player<T>>::kill();
-		<Stage<T>>::kill();
+		<Stage>::kill();
 
 		Self::deposit_event(RawEvent::ParticipantLeft(who));
 
@@ -647,7 +647,7 @@ impl<T: Trait> Module<T> {
 	///Auxiliary functions
 
 	fn zero() -> T::Balance {
-		T::Balance::sa(0)
+		0_u32.into()
 	}
 
 	fn opponent(who: &T::AccountId) -> T::AccountId {
@@ -748,16 +748,16 @@ impl<T: Trait> Module<T> {
 			<PocketCards<T>>::remove(*k);
 		});
 
-		<FlopCards<T>>::kill();
-		<TurnCards<T>>::kill();
-		<RiverCards<T>>::kill();
+		<FlopCards>::kill();
+		<TurnCards>::kill();
+		<RiverCards>::kill();
 		<BetsNow<T>>::kill();
 	}
 
 	fn reset_open_state(dealer: &T::AccountId, player: &T::AccountId) {
 		<OpenCards<T>>::remove(dealer);
 		<OpenCards<T>>::remove(player);
-		<SharedCards<T>>::kill();
+		<SharedCards>::kill();
 		<RoundResult<T>>::kill();
 	}
 

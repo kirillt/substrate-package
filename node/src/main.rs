@@ -4,22 +4,22 @@
 #![warn(unused_extern_crates)]
 
 mod chain_spec;
+#[macro_use]
 mod service;
 mod cli;
 
 pub use substrate_cli::{VersionInfo, IntoExit, error};
 
-fn run() -> cli::error::Result<()> {
+fn main() -> Result<(), cli::error::Error> {
 	let version = VersionInfo {
 		name: "Substrate Node",
 		commit: env!("VERGEN_SHA_SHORT"),
 		version: env!("CARGO_PKG_VERSION"),
 		executable_name: "poker",
-		author: "kirillt",
+		author: "Kirill Taran",
 		description: "poker",
-		support_url: "support.anonymous.an",
+		support_url: "kirill.t256@gmail.com",
 	};
-	cli::run(::std::env::args(), cli::Exit, version)
-}
 
-error_chain::quick_main!(run);
+	cli::run(std::env::args(), cli::Exit, version)
+}

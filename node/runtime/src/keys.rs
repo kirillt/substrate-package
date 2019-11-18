@@ -1,6 +1,6 @@
 use crate::stage::*;
 
-use parity_codec::{Encode, Decode};
+use codec::{Encode, Decode};
 use core::result;
 use rstd::prelude::*;
 
