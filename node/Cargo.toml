@@ -1,5 +1,5 @@
 [package]
-name = 'poker'
+name = 'poker-node'
 version = '1.1.0'
 authors = ['Kirill Taran <kirill.t256@gmail.com>']
 build = 'build.rs'
