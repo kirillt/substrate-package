@@ -1,4 +1,4 @@
-# Substrate Node Template
+# Based on Substrate Node Template
 
 A new SRML-based Substrate node, ready for hacking.
 

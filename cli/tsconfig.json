@@ -1,0 +1,16 @@
+{
+  "exclude": ["node_modules"],
+  "include": ["./src"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "declaration": true,
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "jsx": "react",
+    "lib": ["dom", "esnext"],
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "strict": false,
+    "target": "es5"
+  }
+}
