@@ -1,5 +1,4 @@
-import { SubmittableResult } from "@polkadot/api";
-import { Keyring } from "@polkadot/keyring";
+import { Keyring, SubmittableResult } from "@polkadot/api";
 import { KeyringPair } from "@polkadot/keyring/types";
 import { EventRecord } from "@polkadot/types/interfaces";
 import { u8aToHex } from "@polkadot/util";
@@ -14,7 +13,7 @@ export function getSigner(keyring: Keyring, seed: string): KeyringPair {
     return signer;
 }
 
-export async function sendAndReturnCollated(signer: KeyringPair, tx: any) {
+export async function sendAndReturnCollated(signer: KeyringPair, tx: any): Promise<SubmittableResult> {
     return new Promise((resolve, reject) => {
         tx.signAndSend(signer, (result: SubmittableResult) => {
             if (result.status.isInBlock || result.status.isFinalized) {
@@ -22,11 +21,13 @@ export async function sendAndReturnCollated(signer: KeyringPair, tx: any) {
                     `${e.event.section}: ${e.event.method}`));
                 resolve(result as SubmittableResult);
             }
-            if (result.status.isDropped ||
-                result.status.isInvalid ||
+
+            if (result.status.isDropped || result.status.isInvalid ||
                 result.status.isUsurped) {
+
+                console.error(JSON.stringify(result, null, 2));
                 reject(result as SubmittableResult);
-                throw new Error("Transaction could not be finalized.");
+                throw new Error("Transaction could not be collated.");
             }
         });
     });

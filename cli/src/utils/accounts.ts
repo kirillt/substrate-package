@@ -1,4 +1,4 @@
-import { Keyring } from "@polkadot/keyring";
+import { Keyring } from "@polkadot/api";
 import { blake2AsHex } from "@polkadot/util-crypto";
 
 export function constructLabel(id: string): string {
@@ -15,13 +15,6 @@ export function unfoldId(keyring: Keyring, id: string): string {
     }
 
     return id;
-}
-
-export function computeEvmId(keyring: Keyring, address: string): string {
-    const bytes = keyring.decodeAddress(address);
-    const hex = blake2AsHex(bytes, 256);
-    console.assert(hex.length === 66); // 0x + 32 bytes
-    return "0x" + hex.substring(2 + 24); // skipping 12 bytes
 }
 
 function shorten(long: string): string {
