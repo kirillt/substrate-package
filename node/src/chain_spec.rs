@@ -124,7 +124,6 @@ fn testnet_genesis(initial_authorities: Vec<(AuraId, GrandpaId)>,
 			changes_trie_config: Default::default(),
 		}),
 		timestamp: Some(TimestampConfig {
-//			minimum_period: 4, // 8 second block time. //todo
 		}),
 		indices: Some(IndicesConfig {
 			ids: endowed_accounts.clone(),

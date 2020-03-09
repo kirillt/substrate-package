@@ -118,11 +118,16 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 
 			let dealer = Self::dealer();
-			let player = Self::player();
-
 			if dealer.is_none() {
 				return Self::error(who, "There is nobody so far, you are free to set up the game.");
 			}
+
+			let dealer = dealer.unwrap();
+			if &who == &dealer {
+				return Self::error(who, "Dude, you are not gonna play with yourself, right?");
+			}
+
+			let player = Self::player();
 			if player.is_some() {
 				return Self::error(who, "Sorry man, no room.");
 			}
@@ -617,6 +622,7 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
+	//after prototype stabilization, only necessary events must be emitted
 	fn error(who: T::AccountId, message: &'static str) -> Result {
 		let bytes = message.as_bytes().to_vec();
 		Self::deposit_event(RawEvent::ErrorMessage(Some(who), bytes));

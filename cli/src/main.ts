@@ -8,34 +8,47 @@ import TokenUnit from "./utils/token";
 import yargs = require("yargs");
 import { Arguments, Argv } from "yargs";
 
-import { CUSTOM_TYPES } from "./utils/types";
+import { TYPES } from "./utils/types";
 
 async function main() {
-    const api = await ApiPromise.create({
-        provider: getWsProvider(),
-        types: CUSTOM_TYPES,
-    });
+    const api = await ApiPromise.create(Object.assign(
+        { provider: getWsProvider() },
+        TYPES,
+    ));
 
     const token = await TokenUnit.provide(api);
     const keyring = new Keyring({ type: "sr25519" });
 
     yargs
-        .option("seed", { alias: "s", global: true, default: "//Alice" })
-        .command("test", "Retrieve state of the game from storage",
+        .option("seed", { alias: "s", global: true })
+        .command("state", "Retrieve state of the game from storage",
             (args: Argv) => {
                 return args.option("field", { alias: "f", type: "string" });
             }, async (args) => {
-                const alice = getSigner(keyring, "//Alice");
-                const bob = getSigner(keyring, "//Bob");
+                process.exit(0);
+            })
+        .command("create", "Initialize a game",
+            (args: Argv) => {
+                return args
+                    .option("big-blind", { alias: "b", type: "string" })
+                    .option("buy-in", { alias: "i", type: "string" });
+            }, async (args) => {
+                const participant = getSigner(keyring, args.seed as string);
+                const bigBlind = token.parseBalance(args["big-blind"] as string | number);
+                const buyIn = token.parseBalance(args["buy-in"] as string | number);
+                console.log(`Creating new game with ${bigBlind} for big blind, bringing ${buyIn} chips to the table`);
+                await sendAndReturnCollated(participant, api.tx.poker.createGame(buyIn, bigBlind));
 
-                console.log("Dealer: ", (await api.query.poker.dealer()).toString());
-                console.log("Player: ", (await api.query.poker.player()).toString());
-                await sendAndReturnCollated(alice, api.tx.poker.createGame(1000, 10));
-                console.log("Dealer: ", (await api.query.poker.dealer()).toString());
-                console.log("Player: ", (await api.query.poker.player()).toString());
-                await sendAndReturnCollated(bob, api.tx.poker.joinGame(2000));
-                console.log("Dealer: ", (await api.query.poker.dealer()).toString());
-                console.log("Player: ", (await api.query.poker.player()).toString());
+                process.exit(0);
+            })
+        .command("join", "Join the game",
+            (args: Argv) => {
+                return args.option("buy-in", { alias: "i", type: "string" });
+            }, async (args) => {
+                const participant = getSigner(keyring, args.seed as string);
+                const buyIn = token.parseBalance(args["buy-in"] as string | number);
+                console.log(`Joining the game with ${buyIn} chips`);
+                await sendAndReturnCollated(participant, api.tx.poker.joinGame(buyIn));
 
                 process.exit(0);
             })
